@@ -1,7 +1,11 @@
 # MC68000 Emulator 🖥️
 
-Kleines Projet für das Modul Rechnertechnik aus dem 3. Semester
-Ein lehrreicher MC68000-Prozessor-Emulator in Rust mit grafischer Benutzeroberfläche.
+[![CI](https://github.com/z4roc/mc68000-emulator/workflows/CI/badge.svg)](https://github.com/z4roc/mc68000-emulator/actions)
+[![Release](https://github.com/z4roc/mc68000-emulator/workflows/Release/badge.svg)](https://github.com/z4roc/mc68000-emulator/releases)
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+
+Kleines Projekt für das Modul Rechnertechnik aus dem 3. Semester.  
+Ein lehrreicher MC68000-Prozessor-Emulator in Rust mit professioneller VS Code-style GUI.
 
 ## Features ✨
 
@@ -28,25 +32,57 @@ Ein lehrreicher MC68000-Prozessor-Emulator in Rust mit grafischer Benutzeroberfl
 - 📊 **Output-Log** für Ausführungsschritte
 - 🔄 **Reset-Funktion**
 
-## Installation & Ausführung
+## 🚀 Quick Start
+
+### Binaries herunterladen
+Laden Sie die neueste Version von den [Releases](https://github.com/z4roc/mc68000-emulator/releases) herunter:
+
+**Windows:**
+```bash
+# mc68000-emulator-windows.zip herunterladen und entpacken
+mc68000-gui.exe  # GUI starten
+mc68000.exe      # CLI starten
+```
+
+**Linux:**
+```bash
+# mc68000-emulator-linux.tar.gz herunterladen und entpacken
+./mc68000-gui    # GUI starten
+./mc68000        # CLI starten  
+```
+
+## 🛠️ Development Setup
 
 ### Voraussetzungen
 ```bash
 # Rust installieren
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+
+# Linux: System-Dependencies installieren
+sudo apt-get install libgtk-3-dev libx11-dev
 ```
 
 ### Kompilieren & Starten
 ```bash
 # Repository klonen
-git clone <repository-url>
-cd mc68000
+git clone https://github.com/z4roc/mc68000-emulator.git
+cd mc68000-emulator
 
 # GUI-Version starten
 cargo run --bin mc68000-gui
 
 # CLI-Version starten  
-cargo run --bin mc68000-cli
+cargo run --bin mc68000
+
+# Release-Build erstellen
+cargo build --release
+```
+
+### Tests ausführen
+```bash
+cargo test
+cargo fmt --check
+cargo clippy
 ```
 
 ## Verwendung 📚
