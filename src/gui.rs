@@ -29,7 +29,7 @@ pub struct EmulatorApp {
 
 impl Default for EmulatorApp {
     fn default() -> Self {
-        Self {
+        let mut app = Self {
             assembly_code: String::from(
 "MOVEQ #42, D0    ; Lade 42 in D0
 MOVEQ #7, D1     ; Lade 7 in D1  
@@ -59,7 +59,12 @@ BRA end          ; Endlos-Loop"
             show_compare_view: false,
             bottom_panel_height: 150.0,
             side_panel_width: 300.0,
-        }
+        };
+        
+        // Initial assembly für Highlighting und Compare View
+        app.assemble_initial_code();
+        
+        app
     }
 }
 
@@ -247,6 +252,25 @@ impl eframe::App for EmulatorApp {
 }
 
 impl EmulatorApp {
+    fn assemble_initial_code(&mut self) {
+        // Initial assembly ohne Output-Meldungen für saubere Initialisierung
+        let lines: Vec<&str> = self.assembly_code
+            .lines()
+            .map(|line| {
+                line.split(';').next().unwrap_or("").trim()
+            })
+            .filter(|line| !line.is_empty())
+            .collect();
+        
+        self.machine_code = self.assembler.assemble(&lines);
+        
+        if !self.machine_code.is_empty() {
+            for (address, instruction) in &self.machine_code {
+                self.memory.write_word(*address, *instruction);
+            }
+        }
+    }
+    
     fn assemble_code(&mut self) {
         self.output_log.clear();
         self.error_message.clear();
@@ -327,31 +351,69 @@ impl EmulatorApp {
             ui.heading("📝 Assembly Editor");
             
             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                if self.show_compare_view {
-                    if ui.button("📝 Editor View").clicked() {
-                        self.show_compare_view = false;
-                    }
+                if ui.button("🔍 Compare View").clicked() {
+                    self.show_compare_view = true;
                 }
             });
         });
         
         ui.separator();
         
-        // Large Assembly Editor (VS Code style)
-        let available_height = ui.available_height() - 50.0;
+        // Assembly Editor mit Syntax Highlighting - Verbesserte Höhe
+        let total_available_height = ui.available_height();
         
-        egui::ScrollArea::both()
-            .auto_shrink([false; 2])
-            .show(ui, |ui| {
-                ui.add_sized(
-                    [ui.available_width(), available_height],
-                    egui::TextEdit::multiline(&mut self.assembly_code)
-                        .font(egui::TextStyle::Monospace)
-                        .code_editor()
-                        .desired_rows(30)
-                        .lock_focus(true)
-                );
+        ui.horizontal(|ui| {
+            // Linke Seite: Zeilennummern und Code mit Highlighting (60% Breite)
+            ui.allocate_ui_with_layout(
+                [ui.available_width() * 0.6, total_available_height].into(),
+                egui::Layout::top_down(egui::Align::Min),
+                |ui| {
+                    ui.label("🎨 Syntax Highlighted View:");
+                    ui.separator();
+                    
+                    // Verwende fast die gesamte verfügbare Höhe
+                    let content_height = ui.available_height() - 10.0;
+                    
+                    egui::ScrollArea::both()
+                        .id_salt("editor_view_scroll")
+                        .auto_shrink([false; 2])
+                        .min_scrolled_height(content_height)
+                        .max_height(content_height)
+                        .show(ui, |ui| {
+                            // Syntax-highlighted Assembly anzeigen
+                            self.show_assembly_with_highlighting(ui);
+                        });
+                }
+            );
+            
+            ui.separator();
+            
+            // Rechte Seite: Editierbarer Text (40% Breite)
+            ui.vertical(|ui| {
+                ui.label("✏️ Edit Code:");
+                ui.separator();
+                
+                // Verwende fast die gesamte verfügbare Höhe
+                let content_height = ui.available_height() - 10.0;
+                
+                egui::ScrollArea::both()
+                    .id_salt("assembly_text_editor_scroll")
+                    .auto_shrink([false; 2])
+                    .min_scrolled_height(content_height)
+                    .max_height(content_height)
+                    .show(ui, |ui| {
+                        ui.add_sized(
+                            [ui.available_width(), content_height],
+                            egui::TextEdit::multiline(&mut self.assembly_code)
+                                .id(egui::Id::new("assembly_text_editor"))
+                                .font(egui::TextStyle::Monospace)
+                                .code_editor()
+                                .desired_width(f32::INFINITY)
+                                .desired_rows(50)
+                        );
+                    });
             });
+        });
     }
     
     fn show_compare_editor(&mut self, ui: &mut egui::Ui) {
@@ -371,34 +433,48 @@ impl EmulatorApp {
         
         ui.separator();
         
-        // Split view like VS Code merge conflicts
+        // Split view like VS Code merge conflicts - Verbesserte Höhe
+        let total_available_height = ui.available_height();
+        
         ui.horizontal(|ui| {
-            // Left side - Assembly Code
-            ui.vertical(|ui| {
-                ui.heading("📄 Assembly Source");
-                ui.separator();
-                
-                let available_height = ui.available_height() - 20.0;
-                
-                egui::ScrollArea::vertical()
-                    .max_height(available_height)
-                    .show(ui, |ui| {
-                        // Show assembly with line numbers and syntax highlighting
-                        self.show_assembly_with_highlighting(ui);
-                    });
-            });
+            // Left side - Assembly Code (50% width)
+            ui.allocate_ui_with_layout(
+                [ui.available_width() * 0.5, total_available_height].into(),
+                egui::Layout::top_down(egui::Align::Min),
+                |ui| {
+                    ui.heading("📄 Assembly Source");
+                    ui.separator();
+                    
+                    // Verwende fast die gesamte verfügbare Höhe
+                    let content_height = ui.available_height() - 10.0;
+                    
+                    egui::ScrollArea::vertical()
+                        .id_salt("assembly_compare_scroll")
+                        .auto_shrink([false; 2])
+                        .min_scrolled_height(content_height)
+                        .max_height(content_height)
+                        .show(ui, |ui| {
+                            // Show assembly with line numbers and syntax highlighting
+                            self.show_assembly_with_highlighting(ui);
+                        });
+                }
+            );
             
             ui.separator();
             
-            // Right side - Machine Code
+            // Right side - Machine Code (remaining width)
             ui.vertical(|ui| {
                 ui.heading("🔢 Machine Code");
                 ui.separator();
                 
-                let available_height = ui.available_height() - 20.0;
+                // Verwende fast die gesamte verfügbare Höhe  
+                let content_height = ui.available_height() - 10.0;
                 
                 egui::ScrollArea::vertical()
-                    .max_height(available_height)
+                    .id_salt("machine_code_scroll")
+                    .auto_shrink([false; 2])
+                    .min_scrolled_height(content_height)
+                    .max_height(content_height)
                     .show(ui, |ui| {
                         self.show_machine_code_detailed(ui);
                     });
@@ -409,41 +485,48 @@ impl EmulatorApp {
     fn show_assembly_with_highlighting(&mut self, ui: &mut egui::Ui) {
         let lines: Vec<&str> = self.assembly_code.lines().collect();
         
-        for (line_num, line) in lines.iter().enumerate() {
-            ui.horizontal(|ui| {
-                // Line number (VS Code style)
-                ui.label(
-                    egui::RichText::new(format!("{:3}", line_num + 1))
-                        .color(egui::Color32::GRAY)
-                        .monospace()
-                );
-                
-                // Assembly line with basic syntax highlighting
-                if line.trim().is_empty() {
-                    ui.label(" ");
-                } else if line.trim_start().starts_with(';') {
-                    // Comment - green
+        // Use a Grid to ensure proper layout with unique IDs
+        egui::Grid::new("assembly_highlight_grid")
+            .num_columns(2)
+            .spacing([5.0, 2.0])
+            .striped(false)
+            .show(ui, |ui| {
+                for (line_num, line) in lines.iter().enumerate() {
+                    // Line number (VS Code style)
                     ui.label(
-                        egui::RichText::new(*line)
-                            .color(egui::Color32::from_rgb(106, 153, 85))
+                        egui::RichText::new(format!("{:3}", line_num + 1))
+                            .color(egui::Color32::GRAY)
                             .monospace()
                     );
-                } else if line.contains(':') {
-                    // Label - bright yellow (VS Code style)
-                    ui.label(
-                        egui::RichText::new(*line)
-                            .color(egui::Color32::from_rgb(255, 215, 0))
-                            .monospace()
-                    );
-                } else {
-                    // Check for instruction highlighting
-                    self.highlight_instruction(ui, line);
+                    
+                    // Assembly line with improved syntax highlighting
+                    if line.trim().is_empty() {
+                        ui.label(" ");
+                    } else if line.trim_start().starts_with(';') {
+                        // Comment - green
+                        ui.label(
+                            egui::RichText::new(*line)
+                                .color(egui::Color32::from_rgb(106, 153, 85))
+                                .monospace()
+                        );
+                    } else if line.contains(':') && !line.trim_start().starts_with(' ') {
+                        // Label - bright yellow (VS Code style)
+                        ui.label(
+                            egui::RichText::new(*line)
+                                .color(egui::Color32::from_rgb(255, 215, 0))
+                                .monospace()
+                        );
+                    } else {
+                        // Check for instruction highlighting
+                        self.highlight_instruction_improved(ui, line);
+                    }
+                    
+                    ui.end_row();
                 }
             });
-        }
     }
     
-    fn highlight_instruction(&self, ui: &mut egui::Ui, line: &str) {
+    fn highlight_instruction_improved(&self, ui: &mut egui::Ui, line: &str) {
         // Split line into instruction and operands, preserving comments
         let comment_pos = line.find(';');
         let (code_part, comment_part) = if let Some(pos) = comment_pos {
@@ -452,58 +535,72 @@ impl EmulatorApp {
             (line, None)
         };
         
-        let parts: Vec<&str> = code_part.split_whitespace().collect();
+        let trimmed_code = code_part.trim();
+        if trimmed_code.is_empty() {
+            ui.label(" ");
+            return;
+        }
         
-        if !parts.is_empty() {
-            let instruction = parts[0].to_uppercase();
+        // Use horizontal layout for better control
+        ui.horizontal(|ui| {
+            let parts: Vec<&str> = trimmed_code.split_whitespace().collect();
             
-            // Instruction mnemonic - light blue (VS Code keyword color)
-            let instr_color = match instruction.as_str() {
-                "MOVEQ" | "MOVE" => egui::Color32::from_rgb(86, 156, 214),  // Blue
-                "ADD" | "SUB" | "CMP" => egui::Color32::from_rgb(78, 201, 176), // Cyan
-                "BRA" | "BEQ" | "BNE" | "BCC" | "BCS" => egui::Color32::from_rgb(197, 134, 192), // Purple
-                "NOP" => egui::Color32::from_rgb(156, 220, 254), // Light blue
-                _ => egui::Color32::from_rgb(220, 220, 220), // Default light gray
-            };
-            
-            ui.label(
-                egui::RichText::new(&instruction)
-                    .color(instr_color)
-                    .monospace()
-                    .strong()
-            );
-            
-            // Operands with syntax highlighting
-            if parts.len() > 1 {
-                let operands = parts[1..].join(" ");
-                self.highlight_operands(ui, &operands);
+            if !parts.is_empty() {
+                let instruction = parts[0].to_uppercase();
+                
+                // Instruction mnemonic with improved colors
+                let instr_color = match instruction.as_str() {
+                    "MOVEQ" | "MOVE" => egui::Color32::from_rgb(86, 156, 214),  // Blue
+                    "ADD" | "SUB" | "CMP" => egui::Color32::from_rgb(78, 201, 176), // Cyan
+                    "BRA" | "BEQ" | "BNE" | "BCC" | "BCS" => egui::Color32::from_rgb(197, 134, 192), // Purple
+                    "NOP" => egui::Color32::from_rgb(156, 220, 254), // Light blue
+                    _ => egui::Color32::from_rgb(220, 220, 220), // Default light gray
+                };
+                
+                ui.label(
+                    egui::RichText::new(&instruction)
+                        .color(instr_color)
+                        .monospace()
+                        .strong()
+                );
+                
+                // Operands with improved highlighting
+                if parts.len() > 1 {
+                    let operands = parts[1..].join(" ");
+                    self.highlight_operands_improved(ui, &operands);
+                }
             }
-        }
-        
-        // Comment - green (VS Code comment color)
-        if let Some(comment) = comment_part {
-            ui.label(
-                egui::RichText::new(comment)
-                    .color(egui::Color32::from_rgb(106, 153, 85))
-                    .monospace()
-            );
-        }
+            
+            // Comment - green (VS Code comment color)
+            if let Some(comment) = comment_part {
+                ui.label(
+                    egui::RichText::new(comment)
+                        .color(egui::Color32::from_rgb(106, 153, 85))
+                        .monospace()
+                );
+            }
+        });
     }
     
-    fn highlight_operands(&self, ui: &mut egui::Ui, operands: &str) {
-        ui.label(" "); // Space between instruction and operands
+    fn highlight_operands_improved(&self, ui: &mut egui::Ui, operands: &str) {
+        ui.label(
+            egui::RichText::new(" ")
+                .monospace()
+        ); // Space between instruction and operands
         
-        // Simple operand highlighting
-        for part in operands.split(',') {
+        // Improved operand highlighting with better parsing
+        let parts: Vec<&str> = operands.split(',').collect();
+        
+        for (i, part) in parts.iter().enumerate() {
             let part = part.trim();
             
             let color = if part.starts_with('#') {
-                // Immediate values - orange
+                // Immediate values - orange/green
                 egui::Color32::from_rgb(181, 206, 168)
-            } else if part.starts_with('D') && part.len() == 2 {
-                // Data registers - light green
+            } else if part.starts_with('D') && part.chars().nth(1).map_or(false, |c| c.is_ascii_digit()) {
+                // Data registers - light blue
                 egui::Color32::from_rgb(156, 220, 254)
-            } else if part.starts_with('A') && part.len() == 2 {
+            } else if part.starts_with('A') && part.chars().nth(1).map_or(false, |c| c.is_ascii_digit()) {
                 // Address registers - light blue
                 egui::Color32::from_rgb(156, 220, 254)
             } else {
@@ -518,7 +615,7 @@ impl EmulatorApp {
             );
             
             // Add comma if not the last part
-            if operands.rfind(',').map_or(false, |pos| pos > operands.find(part).unwrap_or(0)) {
+            if i < parts.len() - 1 {
                 ui.label(
                     egui::RichText::new(", ")
                         .color(egui::Color32::WHITE)
@@ -529,8 +626,9 @@ impl EmulatorApp {
     }
     
     fn show_machine_code_detailed(&self, ui: &mut egui::Ui) {
-        egui::Grid::new("machine_code_grid")
+        egui::Grid::new("machine_code_detailed_grid")
             .striped(true)
+            .spacing([8.0, 4.0])
             .show(ui, |ui| {
                 // Header
                 ui.strong("Address");
@@ -539,7 +637,7 @@ impl EmulatorApp {
                 ui.strong("Instruction");
                 ui.end_row();
                 
-                for (address, instruction) in &self.machine_code {
+                for (idx, (address, instruction)) in self.machine_code.iter().enumerate() {
                     let current_marker = if *address == self.cpu.get_pc() { "►" } else { " " };
                     
                     // Address with current PC marker
