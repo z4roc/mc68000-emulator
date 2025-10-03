@@ -1,6 +1,7 @@
 mod cpu;
 mod memory;
 mod assembler;
+pub mod gui;
 
 fn main() {
     println!("Starting MC68000 Emulator...");

@@ -282,6 +282,30 @@ impl Assembler {
             }
         }
     }
+
+    /// Debug: Schreibt Assembly-Listing in einen String
+    pub fn print_assembly_to_string(&self, output: &mut String) {
+        output.push_str("=== Assembly Listing ===\n");
+        for instruction in &self.instructions {
+            if let Some(machine_code) = instruction.machine_code {
+                output.push_str(&format!(
+                    "{:06X}: {:04X}  {} {}\n",
+                    instruction.address,
+                    machine_code,
+                    instruction.mnemonic,
+                    instruction.operands.join(", ")
+                ));
+            }
+        }
+
+        if !self.labels.is_empty() {
+            output.push_str("\n=== Labels ===\n");
+            for (label, address) in &self.labels {
+                output.push_str(&format!("{}: {:06X}\n", label, address));
+            }
+        }
+        output.push_str("\n");
+    }
 }
 
 #[cfg(test)]

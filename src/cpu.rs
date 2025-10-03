@@ -251,4 +251,33 @@ impl CPU {
                  self.condition_code_register & 1);
         println!("SR: 0x{:04X}", self.status_register);
     }
+
+    // Getter-Methoden für GUI
+    pub fn get_data_register(&self, index: usize) -> u32 {
+        if index < 8 {
+            self.data_registers[index]
+        } else {
+            0
+        }
+    }
+
+    pub fn get_address_register(&self, index: usize) -> u32 {
+        if index < 8 {
+            self.address_registers[index]
+        } else {
+            0
+        }
+    }
+
+    pub fn get_pc(&self) -> u32 {
+        self.program_counter
+    }
+
+    pub fn get_ccr(&self) -> u8 {
+        self.condition_code_register
+    }
+
+    pub fn get_sr(&self) -> u16 {
+        self.status_register
+    }
 }
