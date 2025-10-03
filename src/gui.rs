@@ -581,9 +581,11 @@ impl EmulatorApp {
                 let instr_color = match instruction.as_str() {
                     "MOVEQ" | "MOVE" => egui::Color32::from_rgb(86, 156, 214), // Blue
                     "ADD" | "SUB" | "CMP" => egui::Color32::from_rgb(78, 201, 176), // Cyan
-                    "BRA" | "BEQ" | "BNE" | "BCC" | "BCS" => egui::Color32::from_rgb(197, 134, 192), // Purple
-                    "NOP" => egui::Color32::from_rgb(156, 220, 254), // Light blue
-                    _ => egui::Color32::from_rgb(220, 220, 220),     // Default light gray
+                    "BRA" | "BEQ" | "BNE" | "BCC" | "BCS" | "BPL" | "BMI" | "BGE" | "BLT"
+                    | "BGT" | "BLE" => egui::Color32::from_rgb(197, 134, 192), // Purple
+                    "JMP" | "JUMP" => egui::Color32::from_rgb(255, 165, 0), // Orange for jump instructions
+                    "NOP" => egui::Color32::from_rgb(156, 220, 254),        // Light blue
+                    _ => egui::Color32::from_rgb(220, 220, 220),            // Default light gray
                 };
 
                 ui.label(
@@ -624,12 +626,12 @@ impl EmulatorApp {
                 // Immediate values - orange/green
                 egui::Color32::from_rgb(181, 206, 168)
             } else if part.starts_with('D')
-                && part.chars().nth(1).is_some_and(|c| c.is_ascii_digit())
+                && part.chars().nth(1).map_or(false, |c| c.is_ascii_digit())
             {
                 // Data registers - light blue
                 egui::Color32::from_rgb(156, 220, 254)
             } else if part.starts_with('A')
-                && part.chars().nth(1).is_some_and(|c| c.is_ascii_digit())
+                && part.chars().nth(1).map_or(false, |c| c.is_ascii_digit())
             {
                 // Address registers - light blue
                 egui::Color32::from_rgb(156, 220, 254)
@@ -663,7 +665,7 @@ impl EmulatorApp {
                 ui.strong("Instruction");
                 ui.end_row();
 
-                for (_idx, (address, instruction)) in self.machine_code.iter().enumerate() {
+                for (idx, (address, instruction)) in self.machine_code.iter().enumerate() {
                     let current_marker = if *address == self.cpu.get_pc() {
                         "►"
                     } else {
@@ -735,9 +737,22 @@ impl EmulatorApp {
                 let condition = (instruction >> 8) & 0xF;
                 let displacement = (instruction & 0xFF) as i8;
                 let condition_name = match condition {
-                    0x0 => "BRA",
-                    0x7 => "BEQ",
-                    0x6 => "BNE",
+                    0x0 => "BRA", // Always
+                    0x1 => "BSR", // Branch to subroutine
+                    0x2 => "BHI", // Branch if higher
+                    0x3 => "BLS", // Branch if lower or same
+                    0x4 => "BCC", // Branch if carry clear
+                    0x5 => "BCS", // Branch if carry set
+                    0x6 => "BNE", // Branch if not equal
+                    0x7 => "BEQ", // Branch if equal
+                    0x8 => "BVC", // Branch if overflow clear
+                    0x9 => "BVS", // Branch if overflow set
+                    0xA => "BPL", // Branch if plus
+                    0xB => "BMI", // Branch if minus
+                    0xC => "BGE", // Branch if greater or equal
+                    0xD => "BLT", // Branch if less than
+                    0xE => "BGT", // Branch if greater than
+                    0xF => "BLE", // Branch if less or equal
                     _ => "Bcc",
                 };
                 format!("{} {:+}", condition_name, displacement)
@@ -745,6 +760,8 @@ impl EmulatorApp {
             0x4 => {
                 if instruction == 0x4E71 {
                     "NOP".to_string()
+                } else if instruction == 0x4EF8 {
+                    "JMP (xxx).W".to_string()
                 } else {
                     format!("MISC 0x{:04X}", instruction)
                 }

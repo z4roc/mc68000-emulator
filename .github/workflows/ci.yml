@@ -51,8 +51,20 @@ jobs:
     - name: Build GUI version
       run: cargo build --bin mc68000-gui --verbose
       
+    - name: Install cargo-tarpaulin (for coverage)
+      run: cargo install cargo-tarpaulin
+      
     - name: Run tests
       run: cargo test --verbose
+      
+    - name: Run tests with coverage
+      run: cargo tarpaulin --out xml --output-dir coverage/ --skip-clean
+      
+    - name: Upload coverage reports
+      uses: codecov/codecov-action@v3
+      with:
+        file: coverage/cobertura.xml
+        fail_ci_if_error: false
       
     - name: Run CLI binary (smoke test)
       run: |
