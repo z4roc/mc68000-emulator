@@ -1,10 +1,20 @@
 [package]
 name = "mc68000"
 version = "0.1.0"
-edition = "2024"
+edition = "2021"
+description = "MC68000 CPU Emulator with GUI - Educational Project"
+license = "MIT"
+repository = "https://github.com/z4roc/mc68000-emulator"
+readme = "README.md"
+keywords = ["emulator", "mc68000", "cpu", "assembly", "education"]
+categories = ["emulators", "development-tools"]
+
+[lib]
+name = "mc68000"
+path = "src/lib.rs"
 
 [[bin]]
-name = "mc68000-cli"
+name = "mc68000"
 path = "src/main.rs"
 
 [[bin]]

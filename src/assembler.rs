@@ -16,6 +16,12 @@ struct AssemblyInstruction {
     machine_code: Option<u16>,
 }
 
+impl Default for Assembler {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Assembler {
     pub fn new() -> Self {
         Assembler {
@@ -28,7 +34,7 @@ impl Assembler {
     pub fn assemble(&mut self, assembly_lines: &[&str]) -> Vec<(u32, u16)> {
         self.instructions.clear();
         self.labels.clear();
-        
+
         let mut current_address = 0u32;
 
         // Erster Pass: Labels sammeln und Instruktionen parsen
@@ -65,19 +71,23 @@ impl Assembler {
     fn parse_instruction(&self, line: &str, address: u32) -> AssemblyInstruction {
         let parts: Vec<&str> = line.split_whitespace().collect();
         let mnemonic = parts[0].to_uppercase();
-        
+
         let operands = if parts.len() > 1 {
             // Alle Teile außer dem ersten (Mnemonic) zusammenfügen und dann nach Komma splitten
             let operand_string = parts[1..].join(" ");
-            operand_string.split(',')
-                         .map(|s| s.trim().to_string())
-                         .filter(|s| !s.is_empty())
-                         .collect()
+            operand_string
+                .split(',')
+                .map(|s| s.trim().to_string())
+                .filter(|s| !s.is_empty())
+                .collect()
         } else {
             Vec::new()
         };
-        
-        println!("Parse: '{}' -> Mnemonic: '{}', Operands: {:?}", line, mnemonic, operands);
+
+        println!(
+            "Parse: '{}' -> Mnemonic: '{}', Operands: {:?}",
+            line, mnemonic, operands
+        );
 
         AssemblyInstruction {
             address,
@@ -88,7 +98,10 @@ impl Assembler {
     }
 
     fn generate_machine_code(&self, instruction: &AssemblyInstruction) -> Option<u16> {
-        println!("Generiere Maschinencode für: {} {:?}", instruction.mnemonic, instruction.operands);
+        println!(
+            "Generiere Maschinencode für: {} {:?}",
+            instruction.mnemonic, instruction.operands
+        );
         match instruction.mnemonic.as_str() {
             "MOVEQ" => self.encode_moveq(instruction),
             "MOVE" => self.encode_move(instruction),
@@ -117,7 +130,10 @@ impl Assembler {
     // MOVEQ #immediate, Dn
     fn encode_moveq(&self, instruction: &AssemblyInstruction) -> Option<u16> {
         if instruction.operands.len() != 2 {
-            println!("MOVEQ: Erwarte 2 Operanden, gefunden: {}", instruction.operands.len());
+            println!(
+                "MOVEQ: Erwarte 2 Operanden, gefunden: {}",
+                instruction.operands.len()
+            );
             return None;
         }
 
@@ -149,8 +165,9 @@ impl Assembler {
             return None;
         }
 
-        let displacement = self.parse_branch_displacement(&instruction.operands[0], instruction.address)?;
-        
+        let displacement =
+            self.parse_branch_displacement(&instruction.operands[0], instruction.address)?;
+
         // Bcc: 0110 CCCC DDDDDDDD
         let opcode = 0x6000 | (condition << 8) | (displacement as u16 & 0xFF);
         Some(opcode)
@@ -192,13 +209,15 @@ impl Assembler {
 
         if instruction.operands[0].starts_with('#') {
             // CMP #immediate, Dy - verwende CMPI
-            let immediate = self.parse_immediate(&instruction.operands[0])? as u8;
-            let dest_reg = self.parse_data_register(&instruction.operands[1])?;
-            
+            let _immediate = self.parse_immediate(&instruction.operands[0])? as u8;
+            let _dest_reg = self.parse_data_register(&instruction.operands[1])?;
+
             // CMPI.B #immediate, Dn: 0000 1100 0000 0RRR
             // Vereinfacht für 8-bit immediate values
-            println!("Warnung: CMPI noch nicht vollständig implementiert, verwende MOVEQ/CMP workaround");
-            return None;
+            println!(
+                "Warnung: CMPI noch nicht vollständig implementiert, verwende MOVEQ/CMP workaround"
+            );
+            None
         } else {
             // CMP Dx, Dy: 1011 DDD 001 000 SSS
             let source_reg = self.parse_data_register(&instruction.operands[0])?;
@@ -218,8 +237,8 @@ impl Assembler {
         let value_str = &operand[1..];
         if value_str.starts_with("0x") || value_str.starts_with("$") {
             // Hexadezimal
-            let hex_str = if value_str.starts_with("0x") {
-                &value_str[2..]
+            let hex_str = if let Some(stripped) = value_str.strip_prefix("0x") {
+                stripped
             } else {
                 &value_str[1..]
             };
@@ -247,7 +266,7 @@ impl Assembler {
         // Label-Referenz
         if let Some(&target_address) = self.labels.get(operand) {
             let displacement = (target_address as i32) - (current_address as i32) - 2;
-            if displacement >= -128 && displacement <= 127 {
+            if (-128..=127).contains(&displacement) {
                 return Some(displacement as i8);
             }
         }
@@ -304,7 +323,7 @@ impl Assembler {
                 output.push_str(&format!("{}: {:06X}\n", label, address));
             }
         }
-        output.push_str("\n");
+        output.push('\n');
     }
 }
 

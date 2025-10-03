@@ -29,8 +29,13 @@ pub struct CPU {
     status_register: u16,
 }
 
-
 // Kernel ROM Mach ich mal nicht
+impl Default for CPU {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl CPU {
     pub fn new() -> Self {
         CPU {
@@ -61,16 +66,18 @@ impl CPU {
     pub fn execute_instruction(&mut self, memory: &mut Memory) {
         // FETCH: Instruktion aus Speicher lesen (16-bit Wort)
         let instruction = memory.read_word(self.program_counter);
-        
+
         // DECODE: Instruktion analysieren
         let opcode = (instruction >> 12) & 0xF; // Obere 4 Bits
-        
-        println!("PC: 0x{:06X}, Instruction: 0x{:04X}, Opcode: 0x{:01X}", 
-                 self.program_counter, instruction, opcode);
+
+        println!(
+            "PC: 0x{:06X}, Instruction: 0x{:04X}, Opcode: 0x{:01X}",
+            self.program_counter, instruction, opcode
+        );
 
         // EXECUTE: Je nach Opcode entsprechende Funktion aufrufen
         match opcode {
-            0x1 | 0x2 | 0x3 => self.move_instruction(instruction, memory),
+            0x1..=0x3 => self.move_instruction(instruction, memory),
             0x4 => self.miscellaneous_instruction(instruction, memory),
             0x5 => self.addq_subq_instruction(instruction, memory),
             0x6 => self.branch_instruction(instruction, memory),
@@ -89,13 +96,13 @@ impl CPU {
     // Beispiel-Implementierungen für verschiedene Instruktionsgruppen
     fn move_instruction(&mut self, instruction: u16, memory: &mut Memory) {
         println!("MOVE instruction detected");
-        
+
         // Vereinfachtes MOVE D0,D1 (0x3200)
         if instruction == 0x3200 {
             self.data_registers[1] = self.data_registers[0];
             self.update_flags_for_result(self.data_registers[1] as i32);
         }
-        
+
         self.program_counter += 2;
     }
 
@@ -108,9 +115,9 @@ impl CPU {
     fn moveq_instruction(&mut self, instruction: u16, memory: &mut Memory) {
         let register = (instruction >> 9) & 0x7; // Zielregister (D0-D7)
         let immediate = (instruction & 0xFF) as i8 as i32; // 8-bit signed immediate
-        
+
         println!("MOVEQ #0x{:02X}, D{}", immediate & 0xFF, register);
-        
+
         self.data_registers[register as usize] = immediate as u32;
         self.update_flags_for_result(immediate);
         self.program_counter += 2;
@@ -119,11 +126,15 @@ impl CPU {
     fn branch_instruction(&mut self, instruction: u16, memory: &mut Memory) {
         let condition = (instruction >> 8) & 0xF;
         let displacement = (instruction & 0xFF) as i8;
-        
-        println!("Branch instruction, condition: 0x{:01X}, displacement: {}", condition, displacement);
-        
+
+        println!(
+            "Branch instruction, condition: 0x{:01X}, displacement: {}",
+            condition, displacement
+        );
+
         if self.check_condition(condition) {
-            self.program_counter = ((self.program_counter as i32) + (displacement as i32) + 2) as u32;
+            self.program_counter =
+                ((self.program_counter as i32) + (displacement as i32) + 2) as u32;
         } else {
             self.program_counter += 2;
         }
@@ -153,7 +164,7 @@ impl CPU {
 
     fn check_condition(&self, condition: u16) -> bool {
         match condition {
-            0x0 => true,  // BRA - Always branch
+            0x0 => true,                                       // BRA - Always branch
             0x1 => false, // BSR - Branch to subroutine (vereinfacht)
             0x2 => (self.condition_code_register & 0x01) != 0, // BHI - Branch if higher
             0x3 => (self.condition_code_register & 0x01) == 0, // BLS - Branch if lower or same
@@ -178,34 +189,34 @@ impl CPU {
 
     fn sub_cmp_instruction(&mut self, instruction: u16, memory: &mut Memory) {
         let opcode_high = (instruction >> 12) & 0xF;
-        
+
         if opcode_high == 0xB {
             // CMP instruction: 1011 DDD SSS MMM RRR
             let dest_reg = ((instruction >> 9) & 0x7) as usize;
             let source_reg = (instruction & 0x7) as usize;
-            
+
             println!("CMP.W D{}, D{}", source_reg, dest_reg);
-            
+
             let source_value = self.data_registers[source_reg] as i32;
             let dest_value = self.data_registers[dest_reg] as i32;
             let result = dest_value - source_value; // CMP subtrahiert aber speichert nicht
-            
+
             self.update_flags_for_result(result);
         } else {
             // SUB instruction
             let dest_reg = ((instruction >> 9) & 0x7) as usize;
             let source_reg = (instruction & 0x7) as usize;
-            
+
             println!("SUB.W D{}, D{}", source_reg, dest_reg);
-            
+
             let source_value = self.data_registers[source_reg] as i32;
             let dest_value = self.data_registers[dest_reg] as i32;
             let result = dest_value - source_value;
-            
+
             self.data_registers[dest_reg] = result as u32;
             self.update_flags_for_result(result);
         }
-        
+
         self.program_counter += 2;
     }
 
@@ -218,13 +229,13 @@ impl CPU {
         // ADD.W Dx,Dy: 1101 DDD 001 000 SSS
         let dest_reg = ((instruction >> 9) & 0x7) as usize;
         let source_reg = (instruction & 0x7) as usize;
-        
+
         println!("ADD.W D{}, D{}", source_reg, dest_reg);
-        
+
         let source_value = self.data_registers[source_reg] as i32;
         let dest_value = self.data_registers[dest_reg] as i32;
         let result = dest_value + source_value;
-        
+
         self.data_registers[dest_reg] = result as u32;
         self.update_flags_for_result(result);
         self.program_counter += 2;
@@ -239,16 +250,20 @@ impl CPU {
     pub fn print_registers(&self) {
         println!("=== CPU State ===");
         for i in 0..8 {
-            println!("D{}: 0x{:08X}  A{}: 0x{:08X}", 
-                     i, self.data_registers[i], i, self.address_registers[i]);
+            println!(
+                "D{}: 0x{:08X}  A{}: 0x{:08X}",
+                i, self.data_registers[i], i, self.address_registers[i]
+            );
         }
         println!("PC: 0x{:08X}", self.program_counter);
-        println!("CCR: 0x{:02X} (N:{} Z:{} V:{} C:{})", 
-                 self.condition_code_register,
-                 (self.condition_code_register >> 3) & 1,
-                 (self.condition_code_register >> 2) & 1,
-                 (self.condition_code_register >> 1) & 1,
-                 self.condition_code_register & 1);
+        println!(
+            "CCR: 0x{:02X} (N:{} Z:{} V:{} C:{})",
+            self.condition_code_register,
+            (self.condition_code_register >> 3) & 1,
+            (self.condition_code_register >> 2) & 1,
+            (self.condition_code_register >> 1) & 1,
+            self.condition_code_register & 1
+        );
         println!("SR: 0x{:04X}", self.status_register);
     }
 

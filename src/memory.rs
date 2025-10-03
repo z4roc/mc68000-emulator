@@ -1,10 +1,15 @@
-
 // Foliensatz 2 S.33, Adressraum
 /*
-    24 Bit Adressraum = 16 MB
- */
+   24 Bit Adressraum = 16 MB
+*/
 pub struct Memory {
     data: Vec<u8>,
+}
+
+impl Default for Memory {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl Memory {
@@ -30,7 +35,7 @@ impl Memory {
     }
 
     pub fn write_word(&mut self, address: u32, value: u16) {
-        self.data[address as usize] = (value >> 8) as u8;        // High Byte
+        self.data[address as usize] = (value >> 8) as u8; // High Byte
         self.data[(address + 1) as usize] = (value & 0xFF) as u8; // Low Byte
     }
 
@@ -41,7 +46,7 @@ impl Memory {
     }
 
     pub fn write_long(&mut self, address: u32, value: u32) {
-        self.write_word(address, (value >> 16) as u16);      // High Word
+        self.write_word(address, (value >> 16) as u16); // High Word
         self.write_word(address + 2, (value & 0xFFFF) as u16); // Low Word
     }
 }
