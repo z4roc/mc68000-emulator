@@ -120,6 +120,7 @@ impl Assembler {
             "ADD" => self.encode_add(instruction),
             "SUB" => self.encode_sub(instruction),
             "CMP" => self.encode_cmp(instruction),
+            "JMP" | "JUMP" => self.encode_jump(instruction),
             _ => {
                 println!("Warnung: Unbekannte Instruktion: {}", instruction.mnemonic);
                 None
@@ -227,6 +228,22 @@ impl Assembler {
         }
     }
 
+    // JMP absolute address
+    fn encode_jump(&self, instruction: &AssemblyInstruction) -> Option<u16> {
+        if instruction.operands.len() != 1 {
+            return None;
+        }
+
+        // JMP $address oder JMP address (absolute)
+        if self.parse_immediate_address(&instruction.operands[0]).is_some() {
+            // JMP.W $xxxx.W: 0100 1110 1111 1000
+            Some(0x4EF8)
+        } else {
+            println!("JMP benötigt eine absolute Adresse: {}", instruction.operands[0]);
+            None
+        }
+    }
+
     // Hilfsfunktionen zum Parsen
 
     fn parse_immediate(&self, operand: &str) -> Option<i8> {
@@ -260,6 +277,24 @@ impl Assembler {
             }
         }
         None
+    }
+
+    fn parse_immediate_address(&self, operand: &str) -> Option<u16> {
+        // $xxxx oder 0xxxxx Format
+        if operand.starts_with('$') {
+            u16::from_str_radix(&operand[1..], 16).ok()
+        } else if operand.starts_with("0x") {
+            u16::from_str_radix(&operand[2..], 16).ok()
+        } else if operand.chars().all(|c| c.is_ascii_digit()) {
+            operand.parse::<u16>().ok()
+        } else {
+            // Label lookup
+            if let Some(&address) = self.labels.get(operand) {
+                Some(address as u16)
+            } else {
+                None
+            }
+        }
     }
 
     fn parse_branch_displacement(&self, operand: &str, current_address: u32) -> Option<i8> {

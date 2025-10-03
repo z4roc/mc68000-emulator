@@ -23,31 +23,28 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tag_name: ${{ github.ref }}
-          release_name: MC68000 Emulator ${{ github.ref }}
+          release_name: "${{ github.ref_name }}"
+          # GitHub generiert automatisch Release Notes aus Commits und PRs
+          generate_release_notes: true
           body: |
-            ## MC68000 Emulator Release ${{ github.ref_name }}
+            ## 🚀 MC68000 Emulator Release ${{ github.ref_name }}
             
-            ### Features
-            - Complete MC68000 CPU emulation
-            - Assembly parser with syntax highlighting  
-            - Professional VS Code-style GUI
-            - Real-time debugging and stepping
-            - Cross-platform support (Windows & Linux)
+            ### 🎯 Quick Start
+            ```bash
+            # GUI Version (empfohlen)
+            ./mc68000-gui
             
-            ### Downloads
+            # CLI Version
+            ./mc68000 --help
+            ```
+            
+            ### 📦 Downloads
             - **Windows**: `mc68000-emulator-windows.zip`
             - **Linux**: `mc68000-emulator-linux.tar.gz`
             
-            ### Usage
-            ```bash
-            # CLI Version
-            ./mc68000 --help
+            ---
             
-            # GUI Version  
-            ./mc68000-gui
-            ```
-            
-            Built with Rust 🦀
+            **📋 Vollständige Änderungshistorie siehe unten** ⬇️
           draft: false
           prerelease: false
 

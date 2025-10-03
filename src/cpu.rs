@@ -178,8 +178,21 @@ impl CPU {
 
     // Platzhalter für weitere Instruktionsgruppen
     fn miscellaneous_instruction(&mut self, instruction: u16, memory: &mut Memory) {
-        println!("Miscellaneous instruction: 0x{:04X}", instruction);
-        self.program_counter += 2;
+        // Check for JMP instruction (0x4EF8 = JMP (xxx).W)
+        if instruction == 0x4EF8 {
+            // JMP (xxx).W - Jump to absolute word address
+            // The target address follows as the next word
+            let target_address = memory.read_word(self.program_counter + 2) as u32;
+            println!("JMP to address: 0x{:06X}", target_address);
+            self.program_counter = target_address;
+        } else if instruction == 0x4E71 {
+            // NOP
+            println!("NOP");
+            self.program_counter += 2;
+        } else {
+            println!("Miscellaneous instruction: 0x{:04X}", instruction);
+            self.program_counter += 2;
+        }
     }
 
     fn or_instruction(&mut self, instruction: u16, memory: &mut Memory) {
