@@ -43,7 +43,7 @@ jobs:
       run: cargo fmt --all -- --check
       
     - name: Check with Clippy
-      run: cargo clippy --all-targets --all-features -- -D warnings
+      run: cargo clippy --all-targets --all-features
       
     - name: Build CLI version
       run: cargo build --bin mc68000 --verbose

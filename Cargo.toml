@@ -1,7 +1,7 @@
 [package]
 name = "mc68000"
 version = "0.1.0"
-edition = "2024"
+edition = "2021"
 description = "MC68000 CPU Emulator with GUI - Educational Project"
 license = "MIT"
 repository = "https://github.com/z4roc/mc68000-emulator"

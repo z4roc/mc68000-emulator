@@ -1,8 +1,8 @@
 // MC68000 Emulator - GUI Version
-mod cpu;
-mod memory;
 mod assembler;
+mod cpu;
 mod gui;
+mod memory;
 
 fn main() -> eframe::Result {
     env_logger::init(); // Log to stderr (if you want to see it, run with `RUST_LOG=debug`).

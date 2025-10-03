@@ -1,7 +1,7 @@
-mod cpu;
-mod memory;
 mod assembler;
+mod cpu;
 pub mod gui;
+mod memory;
 
 fn main() {
     println!("Starting MC68000 Emulator...");
@@ -13,19 +13,19 @@ fn main() {
 
     // Assembly-Code definieren
     let assembly_program = [
-        "MOVEQ #42, D0",    // Lade 42 in D0
-        "MOVEQ #7, D1",     // Lade 7 in D1  
-        "ADD D0, D1",       // D1 = D1 + D0 (7 + 42 = 49)
-        "MOVEQ #49, D2",    // Lade erwartetes Ergebnis in D2
-        "CMP D2, D1",       // Vergleiche D1 mit D2 (49)
-        "BEQ success",      // Springe zu success wenn gleich
-        "MOVEQ #-1, D0",    // Fehler: -1 in D0
-        "BRA end",          // Springe zum Ende
-        "success:",         // Label für Erfolg
-        "MOVEQ #1, D0",     // Erfolg: 1 in D0
-        "end:",             // Label für Ende
-        "NOP",              // No Operation
-        "BRA end",          // Endlos-Loop
+        "MOVEQ #42, D0", // Lade 42 in D0
+        "MOVEQ #7, D1",  // Lade 7 in D1
+        "ADD D0, D1",    // D1 = D1 + D0 (7 + 42 = 49)
+        "MOVEQ #49, D2", // Lade erwartetes Ergebnis in D2
+        "CMP D2, D1",    // Vergleiche D1 mit D2 (49)
+        "BEQ success",   // Springe zu success wenn gleich
+        "MOVEQ #-1, D0", // Fehler: -1 in D0
+        "BRA end",       // Springe zum Ende
+        "success:",      // Label für Erfolg
+        "MOVEQ #1, D0",  // Erfolg: 1 in D0
+        "end:",          // Label für Ende
+        "NOP",           // No Operation
+        "BRA end",       // Endlos-Loop
     ];
 
     println!("\n=== Assembly-Code ===");
@@ -33,10 +33,10 @@ fn main() {
         println!("{:2}: {}", i + 1, line);
     }
 
-    // Assembly-Code assemblieren  
+    // Assembly-Code assemblieren
     let mut assembler = assembler::Assembler::new();
     let machine_code = assembler.assemble(&assembly_program);
-    
+
     // Assembly-Listing anzeigen
     println!();
     assembler.print_assembly();
@@ -59,7 +59,7 @@ fn main() {
         cpu.execute_instruction(&mut memory);
         cpu.print_registers();
         println!();
-        
+
         // Nach 6 Schritten stoppen (vermeidet infinite loop)
         if step == 6 {
             println!("Demo beendet (infinite loop erreicht)");
@@ -67,4 +67,3 @@ fn main() {
         }
     }
 }
-
