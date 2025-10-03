@@ -235,11 +235,17 @@ impl Assembler {
         }
 
         // JMP $address oder JMP address (absolute)
-        if self.parse_immediate_address(&instruction.operands[0]).is_some() {
+        if self
+            .parse_immediate_address(&instruction.operands[0])
+            .is_some()
+        {
             // JMP.W $xxxx.W: 0100 1110 1111 1000
             Some(0x4EF8)
         } else {
-            println!("JMP benötigt eine absolute Adresse: {}", instruction.operands[0]);
+            println!(
+                "JMP benötigt eine absolute Adresse: {}",
+                instruction.operands[0]
+            );
             None
         }
     }

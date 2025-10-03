@@ -132,43 +132,49 @@ mod tests {
     #[test]
     fn test_branch_instructions() {
         let mut assembler = assembler::Assembler::new();
-        
+
         // Test verschiedene Branch-Instruktionen
         let lines = vec![
             "start:",
             "MOVEQ #0, D0",
-            "BEQ zero",      // Branch if equal (should branch)
-            "MOVEQ #1, D0",  // Should be skipped
+            "BEQ zero",     // Branch if equal (should branch)
+            "MOVEQ #1, D0", // Should be skipped
             "zero:",
             "MOVEQ #42, D1", // Should be executed
             "BRA end",       // Always branch
             "MOVEQ #99, D2", // Should be skipped
             "end:",
-            "NOP"
+            "NOP",
         ];
-        
+
         let result = assembler.assemble(&lines);
-        assert!(!result.is_empty(), "Branch assembly should generate machine code");
+        assert!(
+            !result.is_empty(),
+            "Branch assembly should generate machine code"
+        );
         assert!(result.len() >= 4, "Should generate multiple instructions");
     }
 
     #[test]
     fn test_jump_instruction() {
         let mut assembler = assembler::Assembler::new();
-        
+
         // Test JMP instruction
         let lines = vec![
             "main:",
             "MOVEQ #1, D0",
-            "JMP target", 
-            "MOVEQ #2, D0",  // Should be skipped
+            "JMP target",
+            "MOVEQ #2, D0", // Should be skipped
             "target:",
-            "MOVEQ #3, D0"
+            "MOVEQ #3, D0",
         ];
-        
+
         let result = assembler.assemble(&lines);
-        assert!(!result.is_empty(), "JMP assembly should generate machine code");
-        
+        assert!(
+            !result.is_empty(),
+            "JMP assembly should generate machine code"
+        );
+
         // Check that JMP instruction is generated
         let has_jump = result.iter().any(|(_, instr)| instr & 0xFFF8 == 0x4EF8);
         assert!(has_jump, "Should contain JMP instruction");
@@ -177,61 +183,79 @@ mod tests {
     #[test]
     fn test_loop_pattern() {
         let mut assembler = assembler::Assembler::new();
-        
+
         // Test Loop-ähnliches Muster
         let lines = vec![
-            "MOVEQ #5, D0",    // Counter
+            "MOVEQ #5, D0", // Counter
             "loop:",
-            "MOVEQ #1, D1",    // Do some work
-            "ADD D1, D2",      // Accumulate
-            "MOVEQ #-1, D3",   // Decrement
-            "ADD D3, D0",      // D0 = D0 - 1
-            "BNE loop",        // Branch if not zero
-            "MOVEQ #0, D7"     // End marker
+            "MOVEQ #1, D1",  // Do some work
+            "ADD D1, D2",    // Accumulate
+            "MOVEQ #-1, D3", // Decrement
+            "ADD D3, D0",    // D0 = D0 - 1
+            "BNE loop",      // Branch if not zero
+            "MOVEQ #0, D7",  // End marker
         ];
-        
+
         let result = assembler.assemble(&lines);
-        assert!(!result.is_empty(), "Loop pattern should generate machine code");
-        assert!(result.len() >= 6, "Should generate multiple instructions for loop");
-        
+        assert!(
+            !result.is_empty(),
+            "Loop pattern should generate machine code"
+        );
+        assert!(
+            result.len() >= 6,
+            "Should generate multiple instructions for loop"
+        );
+
         // Check that we have branch back instruction
         let has_branch_back = result.iter().any(|(_, instr)| {
             let opcode = (instr >> 12) & 0xF;
-            opcode == 0x6  // Branch instruction
+            opcode == 0x6 // Branch instruction
         });
-        assert!(has_branch_back, "Should contain branch instruction for loop");
+        assert!(
+            has_branch_back,
+            "Should contain branch instruction for loop"
+        );
     }
 
     #[test]
     fn test_comprehensive_program() {
         let mut assembler = assembler::Assembler::new();
-        
+
         // Komplexes Testprogramm - nur Assembly-Test
         let lines = vec![
-            "MOVEQ #10, D0",   // Load counter
-            "MOVEQ #0, D1",    // Sum accumulator
+            "MOVEQ #10, D0", // Load counter
+            "MOVEQ #0, D1",  // Sum accumulator
             "loop:",
-            "ADD D0, D1",      // Add counter to sum
-            "MOVEQ #-1, D2",   // Decrement value
-            "ADD D2, D0",      // Decrement counter
-            "BNE loop",        // Loop if not zero
-            "MOVEQ #42, D7",   // End marker
-            "NOP"
+            "ADD D0, D1",    // Add counter to sum
+            "MOVEQ #-1, D2", // Decrement value
+            "ADD D2, D0",    // Decrement counter
+            "BNE loop",      // Loop if not zero
+            "MOVEQ #42, D7", // End marker
+            "NOP",
         ];
-        
+
         let machine_code = assembler.assemble(&lines);
         assert!(!machine_code.is_empty(), "Complex program should assemble");
-        
+
         // Check that key instructions are generated
-        let moveq_count = machine_code.iter().filter(|(_, code)| (*code >> 12) == 0x7).count();
+        let moveq_count = machine_code
+            .iter()
+            .filter(|(_, code)| (*code >> 12) == 0x7)
+            .count();
         assert!(moveq_count >= 3, "Should have multiple MOVEQ instructions");
-        
-        let add_count = machine_code.iter().filter(|(_, code)| (*code >> 12) == 0xD).count(); 
+
+        let add_count = machine_code
+            .iter()
+            .filter(|(_, code)| (*code >> 12) == 0xD)
+            .count();
         assert!(add_count >= 2, "Should have ADD instructions");
-        
-        let branch_count = machine_code.iter().filter(|(_, code)| (*code >> 12) == 0x6).count();
+
+        let branch_count = machine_code
+            .iter()
+            .filter(|(_, code)| (*code >> 12) == 0x6)
+            .count();
         assert!(branch_count >= 1, "Should have branch instruction");
-        
+
         // Check NOP is present
         let nop_present = machine_code.iter().any(|(_, code)| *code == 0x4E71);
         assert!(nop_present, "Should have NOP instruction");
@@ -240,29 +264,34 @@ mod tests {
     #[test]
     fn test_all_branch_conditions() {
         let mut assembler = assembler::Assembler::new();
-        
+
         // Test alle Branch-Bedingungen
         let lines = vec![
-            "BRA target",   // Always
-            "BEQ target",   // Equal
-            "BNE target",   // Not Equal
-            "BCC target",   // Carry Clear
-            "BCS target",   // Carry Set
-            "BPL target",   // Plus
-            "BMI target",   // Minus
-            "BGE target",   // Greater or Equal
-            "BLT target",   // Less Than
-            "BGT target",   // Greater Than
-            "BLE target",   // Less or Equal
+            "BRA target", // Always
+            "BEQ target", // Equal
+            "BNE target", // Not Equal
+            "BCC target", // Carry Clear
+            "BCS target", // Carry Set
+            "BPL target", // Plus
+            "BMI target", // Minus
+            "BGE target", // Greater or Equal
+            "BLT target", // Less Than
+            "BGT target", // Greater Than
+            "BLE target", // Less or Equal
             "target:",
-            "NOP"
+            "NOP",
         ];
-        
+
         let result = assembler.assemble(&lines);
-        assert_eq!(result.len(), 12, "Should generate 11 branch instructions + 1 NOP");
-        
+        assert_eq!(
+            result.len(),
+            12,
+            "Should generate 11 branch instructions + 1 NOP"
+        );
+
         // Check that all are branch instructions (opcode 0x6)
-        let branch_count = result.iter()
+        let branch_count = result
+            .iter()
             .filter(|(_, instr)| (instr >> 12) & 0xF == 0x6)
             .count();
         assert_eq!(branch_count, 11, "Should have 11 branch instructions");
@@ -271,16 +300,16 @@ mod tests {
     #[test]
     fn test_memory_operations() {
         let mut memory = memory::Memory::new();
-        
+
         // Test verschiedene Speicher-Operationen
         memory.write_word(0x1000, 0x1234);
         memory.write_word(0x2000, 0x5678);
         memory.write_word(0x3000, 0x9ABC);
-        
+
         assert_eq!(memory.read_word(0x1000), 0x1234);
         assert_eq!(memory.read_word(0x2000), 0x5678);
         assert_eq!(memory.read_word(0x3000), 0x9ABC);
-        
+
         // Test big-endian byte order
         memory.write_word(0x4000, 0xABCD);
         assert_eq!(memory.read_byte(0x4000), 0xAB, "High byte should be first");
@@ -290,16 +319,26 @@ mod tests {
     #[test]
     fn test_assembler_error_handling() {
         let mut assembler = assembler::Assembler::new();
-        
+
         // Test fehlerhafte Assembly-Codes
         let empty_result = assembler.assemble(&[]);
-        assert!(empty_result.is_empty(), "Empty input should return empty result");
-        
-        let comment_only = assembler.assemble(&["; This is just a comment", "  ; Another comment  "]);
-        assert!(comment_only.is_empty(), "Comment-only input should return empty result");
-        
+        assert!(
+            empty_result.is_empty(),
+            "Empty input should return empty result"
+        );
+
+        let comment_only =
+            assembler.assemble(&["; This is just a comment", "  ; Another comment  "]);
+        assert!(
+            comment_only.is_empty(),
+            "Comment-only input should return empty result"
+        );
+
         // Test unbekannte Instruktion
         let unknown_instr = assembler.assemble(&["UNKNOWN D0, D1"]);
-        assert!(unknown_instr.is_empty(), "Unknown instruction should not generate code");
+        assert!(
+            unknown_instr.is_empty(),
+            "Unknown instruction should not generate code"
+        );
     }
 }
