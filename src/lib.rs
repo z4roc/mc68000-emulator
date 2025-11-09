@@ -3,6 +3,11 @@ pub mod cpu;
 pub mod gui;
 pub mod memory;
 
+// Re-export main types for easier access in tests
+pub use assembler::Assembler;
+pub use cpu::CPU;
+pub use memory::Memory;
+
 #[cfg(test)]
 mod tests {
     use super::*;

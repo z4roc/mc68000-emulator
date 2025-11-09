@@ -49,4 +49,8 @@ impl Memory {
         self.write_word(address, (value >> 16) as u16); // High Word
         self.write_word(address + 2, (value & 0xFFFF) as u16); // Low Word
     }
+
+    pub fn clear(&mut self) {
+        self.data.fill(0);
+    }
 }
