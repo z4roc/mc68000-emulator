@@ -22,7 +22,7 @@ struct AssemblyInstruction {
     machine_code: Option<u16>,
     #[allow(dead_code)]
     extension_word: Option<u16>, // Für Adressen bei MOVE.L etc.
-    size: u32,                   // Größe der Instruktion in Bytes (2 oder 4)
+    size: u32, // Größe der Instruktion in Bytes (2 oder 4)
 }
 
 impl Default for Assembler {
