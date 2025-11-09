@@ -1,4 +1,6 @@
 // CCR Flags S.31 Foliensatz 2
+#![allow(clippy::upper_case_acronyms)]
+
 /*
     User Mode:
     Sign-Flag N=1 wenn Ergebnis negativ (Stelle 3)
@@ -24,7 +26,9 @@ pub struct CPU {
     condition_code_register: u8,
 
     // Supervisor Mode S.28 Foliensatz 2
+    #[allow(dead_code)]
     supervisor_stack_pointer: u32,
+    #[allow(dead_code)]
     vector_base_register: u32,
     status_register: u16,
 }
@@ -77,6 +81,7 @@ impl CPU {
     }
 
     // Hauptausführungsschleife
+    #[allow(dead_code)]
     pub fn run(&mut self, memory: &mut Memory) {
         loop {
             self.execute_instruction(memory);
@@ -185,7 +190,7 @@ impl CPU {
         self.program_counter += 2;
     }
 
-    fn addq_subq_instruction(&mut self, instruction: u16, memory: &mut Memory) {
+    fn addq_subq_instruction(&mut self, instruction: u16, _memory: &mut Memory) {
         // SUBQ.L #imm, Dn: 0101 DDD 1 SS MMM RRR
         // ADDQ.L #imm, Dn: 0101 DDD 0 SS MMM RRR
         // DDD = data (bits 9-11)
@@ -196,8 +201,8 @@ impl CPU {
 
         let data = (instruction >> 9) & 0x7; // Extract bits 9-11
         let is_subq = (instruction & 0x0100) != 0; // Check bit 8
-        let size = (instruction >> 6) & 0x3; // Extract bits 6-7
-        let mode = (instruction >> 3) & 0x7; // Extract bits 3-5
+        let _size = (instruction >> 6) & 0x3; // Extract bits 6-7
+        let _mode = (instruction >> 3) & 0x7; // Extract bits 3-5
         let reg = (instruction & 0x7) as usize; // Extract bits 0-2
 
         // Convert 0 to 8 (SUBQ/ADDQ use 0 to represent 8)
@@ -232,7 +237,7 @@ impl CPU {
         self.program_counter += 2;
     }
 
-    fn moveq_instruction(&mut self, instruction: u16, memory: &mut Memory) {
+    fn moveq_instruction(&mut self, instruction: u16, _memory: &mut Memory) {
         let register = (instruction >> 9) & 0x7; // Zielregister (D0-D7)
         let immediate = (instruction & 0xFF) as i8 as i32; // 8-bit signed immediate
 
@@ -243,7 +248,7 @@ impl CPU {
         self.program_counter += 2;
     }
 
-    fn branch_instruction(&mut self, instruction: u16, memory: &mut Memory) {
+    fn branch_instruction(&mut self, instruction: u16, _memory: &mut Memory) {
         let condition = (instruction >> 8) & 0xF;
         let displacement = (instruction & 0xFF) as i8;
 
@@ -339,12 +344,12 @@ impl CPU {
         }
     }
 
-    fn or_instruction(&mut self, instruction: u16, memory: &mut Memory) {
+    fn or_instruction(&mut self, instruction: u16, _memory: &mut Memory) {
         println!("OR instruction: 0x{:04X}", instruction);
         self.program_counter += 2;
     }
 
-    fn sub_cmp_instruction(&mut self, instruction: u16, memory: &mut Memory) {
+    fn sub_cmp_instruction(&mut self, instruction: u16, _memory: &mut Memory) {
         let opcode_high = (instruction >> 12) & 0xF;
 
         if opcode_high == 0xB {
@@ -424,7 +429,7 @@ impl CPU {
         }
     }
 
-    fn add_instruction(&mut self, instruction: u16, memory: &mut Memory) {
+    fn add_instruction(&mut self, instruction: u16, _memory: &mut Memory) {
         // ADD.W Dx,Dy: 1101 DDD 001 000 SSS
         let dest_reg = ((instruction >> 9) & 0x7) as usize;
         let source_reg = (instruction & 0x7) as usize;
@@ -440,12 +445,13 @@ impl CPU {
         self.program_counter += 2;
     }
 
-    fn shift_instruction(&mut self, instruction: u16, memory: &mut Memory) {
+    fn shift_instruction(&mut self, instruction: u16, _memory: &mut Memory) {
         println!("Shift instruction: 0x{:04X}", instruction);
         self.program_counter += 2;
     }
 
     // Debug-Funktionen
+    #[allow(dead_code)]
     pub fn print_registers(&self) {
         println!("=== CPU State ===");
         for i in 0..8 {

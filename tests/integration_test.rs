@@ -198,7 +198,7 @@ fn assemble_and_load(assembly_code: &str) -> (CPU, Memory) {
 
 fn run_until_halt(cpu: &mut CPU, memory: &mut Memory, max_steps: usize) {
     let mut steps = 0;
-    let initial_pc = cpu.get_pc();
+    let _initial_pc = cpu.get_pc();
 
     while steps < max_steps {
         let pc_before = cpu.get_pc();

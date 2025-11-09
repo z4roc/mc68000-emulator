@@ -719,12 +719,12 @@ impl EmulatorApp {
                 // Immediate values - orange/green
                 egui::Color32::from_rgb(181, 206, 168)
             } else if part.starts_with('D')
-                && part.chars().nth(1).map_or(false, |c| c.is_ascii_digit())
+                && part.chars().nth(1).is_some_and(|c| c.is_ascii_digit())
             {
                 // Data registers - light blue
                 egui::Color32::from_rgb(156, 220, 254)
             } else if part.starts_with('A')
-                && part.chars().nth(1).map_or(false, |c| c.is_ascii_digit())
+                && part.chars().nth(1).is_some_and(|c| c.is_ascii_digit())
             {
                 // Address registers - light blue
                 egui::Color32::from_rgb(156, 220, 254)
@@ -758,7 +758,7 @@ impl EmulatorApp {
                 ui.strong("Instruction");
                 ui.end_row();
 
-                for (idx, (address, instruction)) in self.machine_code.iter().enumerate() {
+                for (address, instruction) in self.machine_code.iter() {
                     let current_marker = if *address == self.cpu.get_pc() {
                         "►"
                     } else {
@@ -813,7 +813,7 @@ impl EmulatorApp {
             }
             0x2 => {
                 // MOVE.L variants
-                if (instruction & 0xFFC0) == 0x2078 {
+                if (instruction & 0xFFF8) == 0x2078 {
                     let reg = (instruction >> 9) & 0x7;
                     format!("MOVE.L (xxx).W, D{}", reg)
                 } else if (instruction & 0xFFF8) == 0x23C0 {

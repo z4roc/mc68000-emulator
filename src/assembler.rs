@@ -1,6 +1,10 @@
 // MC68000 Assembly Parser
 // Wandelt Assembly-Strings in Maschinenbefehle um
 
+#![allow(clippy::if_same_then_else)]
+#![allow(clippy::manual_strip)]
+#![allow(clippy::needless_return)]
+
 use std::collections::HashMap;
 
 pub struct Assembler {
@@ -11,9 +15,12 @@ pub struct Assembler {
 #[derive(Debug, Clone)]
 struct AssemblyInstruction {
     address: u32,
+    #[allow(dead_code)]
+    label: Option<String>,
     mnemonic: String,
     operands: Vec<String>,
     machine_code: Option<u16>,
+    #[allow(dead_code)]
     extension_word: Option<u16>, // Für Adressen bei MOVE.L etc.
     size: u32,                   // Größe der Instruktion in Bytes (2 oder 4)
 }
@@ -169,6 +176,7 @@ impl Assembler {
         if parts.is_empty() {
             return AssemblyInstruction {
                 address,
+                label: None,
                 mnemonic: String::new(),
                 operands: Vec::new(),
                 machine_code: None,
@@ -235,6 +243,7 @@ impl Assembler {
 
         AssemblyInstruction {
             address,
+            label: None,
             mnemonic,
             operands,
             machine_code: None,
@@ -339,6 +348,7 @@ impl Assembler {
     }
 
     // MOVE Dx, Dy or MOVE.L label, Dn (old version, now deprecated)
+    #[allow(dead_code)]
     fn encode_move(&self, instruction: &mut AssemblyInstruction) -> Option<u16> {
         self.encode_move_with_ext(instruction).map(|(code, _)| code)
     }
@@ -372,6 +382,7 @@ impl Assembler {
     }
 
     // MULS - Signed Multiply
+    #[allow(dead_code)]
     fn encode_muls(&self, instruction: &AssemblyInstruction) -> Option<u16> {
         self.encode_muls_with_ext(instruction).map(|(code, _)| code)
     }
@@ -448,6 +459,7 @@ impl Assembler {
     }
 
     // CMP #immediate, Dy oder CMP Dx, Dy
+    #[allow(dead_code)]
     fn encode_cmp(&self, instruction: &AssemblyInstruction) -> Option<u16> {
         self.encode_cmp_with_ext(instruction).map(|(code, _)| code)
     }
@@ -553,7 +565,7 @@ impl Assembler {
         }
 
         let reg = self.parse_data_register(&instruction.operands[0])?;
-        let displacement =
+        let _displacement =
             self.parse_branch_displacement(&instruction.operands[1], instruction.address)?;
 
         // DBRA Dn, disp: 0101 0001 1100 1RRR
@@ -580,6 +592,7 @@ impl Assembler {
         }
     }
 
+    #[allow(dead_code)]
     fn parse_data_directive(&self, line: &str) -> Option<(String, u32)> {
         self.parse_data_directive_with_value(line)
             .map(|(label, size, _)| (label, size))
@@ -762,6 +775,7 @@ impl Assembler {
     }
 
     /// Debug: Zeigt alle geparsten Instruktionen an
+    #[allow(dead_code)]
     pub fn print_assembly(&self) {
         println!("=== Assembly Listing ===");
         for instruction in &self.instructions {

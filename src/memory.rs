@@ -19,10 +19,12 @@ impl Memory {
         }
     }
 
+    #[allow(dead_code)]
     pub fn read_byte(&self, address: u32) -> u8 {
         self.data[address as usize]
     }
 
+    #[allow(dead_code)]
     pub fn write_byte(&mut self, address: u32, value: u8) {
         self.data[address as usize] = value;
     }
