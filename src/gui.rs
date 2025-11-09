@@ -284,7 +284,9 @@ impl EmulatorApp {
                 if let Some(first_char) = line.chars().next() {
                     if first_char.is_ascii_digit() {
                         // Find first non-digit, non-whitespace character
-                        if let Some(pos) = line.find(|c: char| !c.is_ascii_digit() && !c.is_whitespace()) {
+                        if let Some(pos) =
+                            line.find(|c: char| !c.is_ascii_digit() && !c.is_whitespace())
+                        {
                             return line[pos..].trim();
                         }
                     }
@@ -300,12 +302,14 @@ impl EmulatorApp {
             for (address, instruction) in &self.machine_code {
                 self.memory.write_word(*address, *instruction);
             }
-            
+
             // Setze PC auf die erste INSTRUCTION (skip data)
-            let first_instruction = self.machine_code.iter()
+            let first_instruction = self
+                .machine_code
+                .iter()
                 .find(|(addr, _)| *addr >= 0x1000)
                 .or_else(|| self.machine_code.first());
-                
+
             if let Some((first_address, _)) = first_instruction {
                 self.cpu.set_pc(*first_address);
             }
@@ -315,7 +319,7 @@ impl EmulatorApp {
     fn assemble_code(&mut self) {
         self.output_log.clear();
         self.error_message.clear();
-        
+
         // Speicher löschen für neuen Code
         self.memory.clear();
 
@@ -330,7 +334,9 @@ impl EmulatorApp {
                 if let Some(first_char) = line.chars().next() {
                     if first_char.is_ascii_digit() {
                         // Find first non-digit, non-whitespace character
-                        if let Some(pos) = line.find(|c: char| !c.is_ascii_digit() && !c.is_whitespace()) {
+                        if let Some(pos) =
+                            line.find(|c: char| !c.is_ascii_digit() && !c.is_whitespace())
+                        {
                             return line[pos..].trim();
                         }
                     }
@@ -365,13 +371,15 @@ impl EmulatorApp {
 
         // CPU zurücksetzen und PC auf erste Instruktion setzen
         self.reset_emulator();
-        
+
         // Setze PC auf die Adresse der ersten INSTRUCTION (skip data section at $0800)
         // Find first address >= $1000 (typical code section start)
-        let first_instruction = self.machine_code.iter()
+        let first_instruction = self
+            .machine_code
+            .iter()
             .find(|(addr, _)| *addr >= 0x1000)
             .or_else(|| self.machine_code.first());
-            
+
         if let Some((first_address, _)) = first_instruction {
             self.cpu.set_pc(*first_address);
             self.output_log.push_str(&format!(
@@ -388,7 +396,7 @@ impl EmulatorApp {
             for _ in 0..1000 {
                 // Maximal 1000 Schritte zur Sicherheit
                 let old_pc = self.cpu.get_pc();
-                
+
                 // Prüfe ob PC noch innerhalb des Code-Bereichs ist
                 let in_range = self.machine_code.iter().any(|(addr, _)| *addr == old_pc);
                 if !in_range {
@@ -398,12 +406,13 @@ impl EmulatorApp {
                     ));
                     break;
                 }
-                
+
                 self.step_program();
-                
+
                 // Prüfe ob PC sich geändert hat (SIMHALT hält PC an)
                 if self.cpu.get_pc() == old_pc {
-                    self.output_log.push_str("✓ Programm regulär beendet (SIMHALT)\n");
+                    self.output_log
+                        .push_str("✓ Programm regulär beendet (SIMHALT)\n");
                     break;
                 }
             }
@@ -416,10 +425,10 @@ impl EmulatorApp {
 
     fn step_program(&mut self) {
         let pc = self.cpu.get_pc();
-        
+
         // Prüfe ob PC auf eine assemblierte Instruktion zeigt
         let instruction_exists = self.machine_code.iter().any(|(addr, _)| *addr == pc);
-        
+
         if !instruction_exists {
             self.output_log.push_str(&format!(
                 "🛑 Programm beendet (PC 0x{:06X} ist außerhalb des assemblierten Codes)\n",
@@ -444,16 +453,18 @@ impl EmulatorApp {
         self.cpu.reset();
         self.current_step = 0;
         self.is_running = false;
-        
+
         // Setze PC auf die erste INSTRUCTION zurück (skip data at $0800)
-        let first_instruction = self.machine_code.iter()
+        let first_instruction = self
+            .machine_code
+            .iter()
             .find(|(addr, _)| *addr >= 0x1000)
             .or_else(|| self.machine_code.first());
-            
+
         if let Some((first_address, _)) = first_instruction {
             self.cpu.set_pc(*first_address);
         }
-        
+
         self.output_log.push_str("🔄 Emulator zurückgesetzt\n");
     }
 

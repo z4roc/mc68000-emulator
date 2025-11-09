@@ -14,8 +14,8 @@ struct AssemblyInstruction {
     mnemonic: String,
     operands: Vec<String>,
     machine_code: Option<u16>,
-    extension_word: Option<u16>,  // Für Adressen bei MOVE.L etc.
-    size: u32,  // Größe der Instruktion in Bytes (2 oder 4)
+    extension_word: Option<u16>, // Für Adressen bei MOVE.L etc.
+    size: u32,                   // Größe der Instruktion in Bytes (2 oder 4)
 }
 
 impl Default for Assembler {
@@ -38,7 +38,7 @@ impl Assembler {
         self.labels.clear();
 
         let mut current_address = 0u32;
-        let mut data_values: Vec<(u32, u32)> = Vec::new();  // (address, value) für DC.L
+        let mut data_values: Vec<(u32, u32)> = Vec::new(); // (address, value) für DC.L
 
         // Erster Pass: Labels sammeln und Instruktionen parsen
         for line in assembly_lines {
@@ -65,7 +65,7 @@ impl Assembler {
                 let parts: Vec<&str> = line.splitn(2, ':').collect();
                 let label_name = parts[0].trim().to_string();
                 self.labels.insert(label_name, current_address);
-                
+
                 // Check if there's an instruction on the same line
                 if parts.len() > 1 {
                     line = parts[1].trim();
@@ -94,25 +94,25 @@ impl Assembler {
 
             // Instruktion parsen
             let instruction = self.parse_instruction(line, current_address);
-            current_address += instruction.size;  // Berücksichtige Extension Words
+            current_address += instruction.size; // Berücksichtige Extension Words
             self.instructions.push(instruction);
         }
 
         // Zweiter Pass: Maschinenbefehle generieren
         let mut machine_code = Vec::new();
-        
+
         // Add data values first (DC.L directives)
         for (addr, value) in data_values {
             // Split 32-bit value into two 16-bit words (big-endian)
             machine_code.push((addr, (value >> 16) as u16));
             machine_code.push((addr + 2, (value & 0xFFFF) as u16));
         }
-        
+
         for i in 0..self.instructions.len() {
             let inst = &self.instructions[i];
             if let Some((code, ext_word)) = self.encode_instruction_with_ext(inst) {
                 machine_code.push((inst.address, code));
-                
+
                 // Extension Word hinzufügen, falls vorhanden
                 if let Some(ext) = ext_word {
                     machine_code.push((inst.address + 2, ext));
@@ -123,7 +123,10 @@ impl Assembler {
         machine_code
     }
 
-    fn encode_instruction_with_ext(&self, instruction: &AssemblyInstruction) -> Option<(u16, Option<u16>)> {
+    fn encode_instruction_with_ext(
+        &self,
+        instruction: &AssemblyInstruction,
+    ) -> Option<(u16, Option<u16>)> {
         println!(
             "Generiere Maschinencode für: {} {:?}",
             instruction.mnemonic, instruction.operands
@@ -194,30 +197,35 @@ impl Assembler {
         let size = if operands.len() >= 2 {
             let src = &operands[0];
             let dst = &operands[operands.len() - 1];
-            
+
             // Instruktionen die Extension Words brauchen:
             // 1. MOVE.L/MOVEA.L mit #immediate oder Labels
             // 2. CMP.L mit #immediate
             // 3. MULS mit #immediate
-            
+
             if (mnemonic == "MOVE" || mnemonic == "MOVEA") && mnemonic_parts.get(1) == Some(&"L") {
                 // MOVE.L/MOVEA.L mit #immediate oder Label braucht Extension Word
-                if src.starts_with('#') || (!src.starts_with('D') && !src.starts_with('A') && !src.starts_with('(')) {
-                    4  // Instruktion + Extension Word
+                if src.starts_with('#')
+                    || (!src.starts_with('D') && !src.starts_with('A') && !src.starts_with('('))
+                {
+                    4 // Instruktion + Extension Word
                 } else if !dst.starts_with('D') && !dst.starts_with('A') && !dst.starts_with('(') {
-                    4  // Destination ist Label
+                    4 // Destination ist Label
                 } else {
-                    2  // Register-zu-Register
+                    2 // Register-zu-Register
                 }
-            } else if mnemonic == "CMP" && mnemonic_parts.get(1) == Some(&"L") && src.starts_with('#') {
-                4  // CMP.L #imm, Dn
+            } else if mnemonic == "CMP"
+                && mnemonic_parts.get(1) == Some(&"L")
+                && src.starts_with('#')
+            {
+                4 // CMP.L #imm, Dn
             } else if mnemonic == "MULS" && src.starts_with('#') {
-                4  // MULS #imm, Dn
+                4 // MULS #imm, Dn
             } else {
-                2  // Standardgröße
+                2 // Standardgröße
             }
         } else {
-            2  // Keine oder nur ein Operand
+            2 // Keine oder nur ein Operand
         };
 
         println!(
@@ -254,7 +262,10 @@ impl Assembler {
     }
 
     // MOVE with extension word support
-    fn encode_move_with_ext(&self, instruction: &AssemblyInstruction) -> Option<(u16, Option<u16>)> {
+    fn encode_move_with_ext(
+        &self,
+        instruction: &AssemblyInstruction,
+    ) -> Option<(u16, Option<u16>)> {
         if instruction.operands.len() != 2 {
             return None;
         }
@@ -333,7 +344,10 @@ impl Assembler {
     }
 
     // MOVEA - Move Address (loads address into An register)
-    fn encode_movea_with_ext(&self, instruction: &AssemblyInstruction) -> Option<(u16, Option<u16>)> {
+    fn encode_movea_with_ext(
+        &self,
+        instruction: &AssemblyInstruction,
+    ) -> Option<(u16, Option<u16>)> {
         if instruction.operands.len() != 2 {
             return None;
         }
@@ -362,7 +376,10 @@ impl Assembler {
         self.encode_muls_with_ext(instruction).map(|(code, _)| code)
     }
 
-    fn encode_muls_with_ext(&self, instruction: &AssemblyInstruction) -> Option<(u16, Option<u16>)> {
+    fn encode_muls_with_ext(
+        &self,
+        instruction: &AssemblyInstruction,
+    ) -> Option<(u16, Option<u16>)> {
         if instruction.operands.len() != 2 {
             return None;
         }
@@ -499,10 +516,10 @@ impl Assembler {
 
         let immediate = self.parse_immediate(&instruction.operands[0])? as u16;
         let reg = self.parse_data_register(&instruction.operands[1])?;
-        
+
         // Convert 8 to 0 for encoding (SUBQ uses 0 to represent 8)
         let data = if immediate == 8 { 0 } else { immediate & 0x7 };
-        
+
         // SUBQ.L #imm, Dn: 0101 DDD 110 000 RRR
         let opcode = 0x5180 | (data << 9) | (reg as u16);
         Some(opcode)
@@ -516,10 +533,14 @@ impl Assembler {
 
         let shift_count = self.parse_immediate(&instruction.operands[0])? as u16;
         let reg = self.parse_data_register(&instruction.operands[1])?;
-        
+
         // Convert 8 to 0 for encoding
-        let count = if shift_count == 8 { 0 } else { shift_count & 0x7 };
-        
+        let count = if shift_count == 8 {
+            0
+        } else {
+            shift_count & 0x7
+        };
+
         // ASL.L #imm, Dn: 1110 CCC 110 100 RRR
         let opcode = 0xE180 | (count << 9) | (reg as u16);
         Some(opcode)
@@ -532,8 +553,9 @@ impl Assembler {
         }
 
         let reg = self.parse_data_register(&instruction.operands[0])?;
-        let displacement = self.parse_branch_displacement(&instruction.operands[1], instruction.address)?;
-        
+        let displacement =
+            self.parse_branch_displacement(&instruction.operands[1], instruction.address)?;
+
         // DBRA Dn, disp: 0101 0001 1100 1RRR
         // Note: DBRA displacement is 16-bit, but we'll use 8-bit for simplicity
         let opcode = 0x51C8 | (reg as u16);
@@ -547,7 +569,7 @@ impl Assembler {
         if parts.len() < 2 {
             return None;
         }
-        
+
         let addr_str = parts[1];
         if addr_str.starts_with('$') {
             u32::from_str_radix(&addr_str[1..], 16).ok()
@@ -559,17 +581,18 @@ impl Assembler {
     }
 
     fn parse_data_directive(&self, line: &str) -> Option<(String, u32)> {
-        self.parse_data_directive_with_value(line).map(|(label, size, _)| (label, size))
+        self.parse_data_directive_with_value(line)
+            .map(|(label, size, _)| (label, size))
     }
 
     fn parse_data_directive_with_value(&self, line: &str) -> Option<(String, u32, Option<u32>)> {
         // Parse DC.L and DS.L directives
         let line_upper = line.to_uppercase();
-        
+
         // Extract label and directive part
         let label: String;
         let directive_str: String;
-        
+
         if line.contains(':') {
             let parts: Vec<&str> = line.splitn(2, ':').collect();
             label = parts[0].trim().to_string();
@@ -592,7 +615,7 @@ impl Assembler {
                 directive_str = line.to_string();
             }
         }
-        
+
         // Determine size based on directive
         let size = if line_upper.contains("DC.L") || line_upper.contains("DS.L") {
             4 // Long word = 4 bytes
@@ -603,7 +626,7 @@ impl Assembler {
         } else {
             2 // Default to word
         };
-        
+
         // Extract value for DC directives (DS just reserves space)
         let value = if line_upper.contains("DC.") {
             // Find the value after DC.L/DC.W/DC.B
@@ -624,7 +647,7 @@ impl Assembler {
         } else {
             None // DS directive - no initial value
         };
-        
+
         Some((label, size, value))
     }
 
@@ -697,7 +720,7 @@ impl Assembler {
     fn parse_indirect_register(&self, operand: &str) -> Option<u8> {
         // Parse (An) - Address Register Indirect
         if operand.starts_with('(') && operand.ends_with(')') {
-            let inner = &operand[1..operand.len()-1];
+            let inner = &operand[1..operand.len() - 1];
             return self.parse_address_register(inner);
         }
         None
