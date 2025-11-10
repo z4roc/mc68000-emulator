@@ -19,10 +19,12 @@ impl Memory {
         }
     }
 
+    #[allow(dead_code)]
     pub fn read_byte(&self, address: u32) -> u8 {
         self.data[address as usize]
     }
 
+    #[allow(dead_code)]
     pub fn write_byte(&mut self, address: u32, value: u8) {
         self.data[address as usize] = value;
     }
@@ -48,5 +50,9 @@ impl Memory {
     pub fn write_long(&mut self, address: u32, value: u32) {
         self.write_word(address, (value >> 16) as u16); // High Word
         self.write_word(address + 2, (value & 0xFFFF) as u16); // Low Word
+    }
+
+    pub fn clear(&mut self) {
+        self.data.fill(0);
     }
 }
