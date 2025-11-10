@@ -277,7 +277,22 @@ impl EmulatorApp {
         let lines: Vec<&str> = self
             .assembly_code
             .lines()
-            .map(|line| line.split(';').next().unwrap_or("").trim())
+            .map(|line| {
+                // Remove comments (everything after ';')
+                let line = line.split(';').next().unwrap_or("").trim();
+                // Remove line numbers if present (e.g., "1 ORG $1000" -> "ORG $1000")
+                if let Some(first_char) = line.chars().next() {
+                    if first_char.is_ascii_digit() {
+                        // Find first non-digit, non-whitespace character
+                        if let Some(pos) =
+                            line.find(|c: char| !c.is_ascii_digit() && !c.is_whitespace())
+                        {
+                            return line[pos..].trim();
+                        }
+                    }
+                }
+                line
+            })
             .filter(|line| !line.is_empty())
             .collect();
 
@@ -287,6 +302,17 @@ impl EmulatorApp {
             for (address, instruction) in &self.machine_code {
                 self.memory.write_word(*address, *instruction);
             }
+
+            // Setze PC auf die erste INSTRUCTION (skip data)
+            let first_instruction = self
+                .machine_code
+                .iter()
+                .find(|(addr, _)| *addr >= 0x1000)
+                .or_else(|| self.machine_code.first());
+
+            if let Some((first_address, _)) = first_instruction {
+                self.cpu.set_pc(*first_address);
+            }
         }
     }
 
@@ -294,13 +320,28 @@ impl EmulatorApp {
         self.output_log.clear();
         self.error_message.clear();
 
+        // Speicher löschen für neuen Code
+        self.memory.clear();
+
         // Assembly-Code in Zeilen aufteilen und assemblieren
         let lines: Vec<&str> = self
             .assembly_code
             .lines()
             .map(|line| {
-                // Kommentare entfernen (alles nach ';')
-                line.split(';').next().unwrap_or("").trim()
+                // Remove comments (everything after ';')
+                let line = line.split(';').next().unwrap_or("").trim();
+                // Remove line numbers if present (e.g., "1 ORG $1000" -> "ORG $1000")
+                if let Some(first_char) = line.chars().next() {
+                    if first_char.is_ascii_digit() {
+                        // Find first non-digit, non-whitespace character
+                        if let Some(pos) =
+                            line.find(|c: char| !c.is_ascii_digit() && !c.is_whitespace())
+                        {
+                            return line[pos..].trim();
+                        }
+                    }
+                }
+                line
             })
             .filter(|line| !line.is_empty())
             .collect();
@@ -328,19 +369,52 @@ impl EmulatorApp {
         self.assembler
             .print_assembly_to_string(&mut self.output_log);
 
+        // CPU zurücksetzen und PC auf erste Instruktion setzen
         self.reset_emulator();
+
+        // Setze PC auf die Adresse der ersten INSTRUCTION (skip data section at $0800)
+        // Find first address >= $1000 (typical code section start)
+        let first_instruction = self
+            .machine_code
+            .iter()
+            .find(|(addr, _)| *addr >= 0x1000)
+            .or_else(|| self.machine_code.first());
+
+        if let Some((first_address, _)) = first_instruction {
+            self.cpu.set_pc(*first_address);
+            self.output_log.push_str(&format!(
+                "🎯 PC auf Startadresse 0x{:06X} gesetzt\n",
+                first_address
+            ));
+        }
     }
 
     fn run_program(&mut self) {
         if !self.step_mode {
             self.is_running = true;
             // Kontinuierliche Ausführung (würde in echtem Code begrenzt werden)
-            for _ in 0..100 {
-                // Maximal 100 Schritte zur Sicherheit
-                if self.cpu.get_pc() >= (self.machine_code.len() as u32 * 2) {
+            for _ in 0..1000 {
+                // Maximal 1000 Schritte zur Sicherheit
+                let old_pc = self.cpu.get_pc();
+
+                // Prüfe ob PC noch innerhalb des Code-Bereichs ist
+                let in_range = self.machine_code.iter().any(|(addr, _)| *addr == old_pc);
+                if !in_range {
+                    self.output_log.push_str(&format!(
+                        "🛑 Programm beendet (PC 0x{:06X} außerhalb des Codes)\n",
+                        old_pc
+                    ));
                     break;
                 }
+
                 self.step_program();
+
+                // Prüfe ob PC sich geändert hat (SIMHALT hält PC an)
+                if self.cpu.get_pc() == old_pc {
+                    self.output_log
+                        .push_str("✓ Programm regulär beendet (SIMHALT)\n");
+                    break;
+                }
             }
             self.is_running = false;
         } else {
@@ -350,9 +424,16 @@ impl EmulatorApp {
     }
 
     fn step_program(&mut self) {
-        if self.cpu.get_pc() >= (self.machine_code.len() as u32 * 2) {
-            self.output_log
-                .push_str("🛑 Programm beendet (PC außerhalb des Codes)\n");
+        let pc = self.cpu.get_pc();
+
+        // Prüfe ob PC auf eine assemblierte Instruktion zeigt
+        let instruction_exists = self.machine_code.iter().any(|(addr, _)| *addr == pc);
+
+        if !instruction_exists {
+            self.output_log.push_str(&format!(
+                "🛑 Programm beendet (PC 0x{:06X} ist außerhalb des assemblierten Codes)\n",
+                pc
+            ));
             return;
         }
 
@@ -372,6 +453,18 @@ impl EmulatorApp {
         self.cpu.reset();
         self.current_step = 0;
         self.is_running = false;
+
+        // Setze PC auf die erste INSTRUCTION zurück (skip data at $0800)
+        let first_instruction = self
+            .machine_code
+            .iter()
+            .find(|(addr, _)| *addr >= 0x1000)
+            .or_else(|| self.machine_code.first());
+
+        if let Some((first_address, _)) = first_instruction {
+            self.cpu.set_pc(*first_address);
+        }
+
         self.output_log.push_str("🔄 Emulator zurückgesetzt\n");
     }
 
@@ -626,12 +719,12 @@ impl EmulatorApp {
                 // Immediate values - orange/green
                 egui::Color32::from_rgb(181, 206, 168)
             } else if part.starts_with('D')
-                && part.chars().nth(1).map_or(false, |c| c.is_ascii_digit())
+                && part.chars().nth(1).is_some_and(|c| c.is_ascii_digit())
             {
                 // Data registers - light blue
                 egui::Color32::from_rgb(156, 220, 254)
             } else if part.starts_with('A')
-                && part.chars().nth(1).map_or(false, |c| c.is_ascii_digit())
+                && part.chars().nth(1).is_some_and(|c| c.is_ascii_digit())
             {
                 // Address registers - light blue
                 egui::Color32::from_rgb(156, 220, 254)
@@ -665,7 +758,7 @@ impl EmulatorApp {
                 ui.strong("Instruction");
                 ui.end_row();
 
-                for (idx, (address, instruction)) in self.machine_code.iter().enumerate() {
+                for (address, instruction) in self.machine_code.iter() {
                     let current_marker = if *address == self.cpu.get_pc() {
                         "►"
                     } else {
@@ -718,20 +811,52 @@ impl EmulatorApp {
                 let immediate = (instruction & 0xFF) as i8;
                 format!("MOVEQ #{}, D{}", immediate, reg)
             }
+            0x2 => {
+                // MOVE.L variants
+                if (instruction & 0xFFF8) == 0x2078 {
+                    let reg = (instruction >> 9) & 0x7;
+                    format!("MOVE.L (xxx).W, D{}", reg)
+                } else if (instruction & 0xFFF8) == 0x23C0 {
+                    let reg = instruction & 0x7;
+                    format!("MOVE.L D{}, (xxx).W", reg)
+                } else {
+                    format!("MOVE 0x{:04X}", instruction)
+                }
+            }
             0x3 => {
                 let dest_reg = (instruction >> 9) & 0x7;
                 let src_reg = instruction & 0x7;
                 format!("MOVE D{}, D{}", src_reg, dest_reg)
             }
-            0xD => {
-                let dest_reg = (instruction >> 9) & 0x7;
-                let src_reg = instruction & 0x7;
-                format!("ADD D{}, D{}", src_reg, dest_reg)
+            0x4 => {
+                if instruction == 0x4E71 {
+                    "NOP".to_string()
+                } else if instruction == 0x4E72 {
+                    "SIMHALT".to_string()
+                } else if instruction == 0x4EF8 {
+                    "JMP (xxx).W".to_string()
+                } else if (instruction & 0xFFC0) == 0x4A80 {
+                    // TST.L Dn
+                    let reg = instruction & 0x7;
+                    format!("TST.L D{}", reg)
+                } else {
+                    format!("MISC 0x{:04X}", instruction)
+                }
             }
-            0xB => {
-                let dest_reg = (instruction >> 9) & 0x7;
-                let src_reg = instruction & 0x7;
-                format!("CMP D{}, D{}", src_reg, dest_reg)
+            0x5 => {
+                if (instruction & 0xF1C0) == 0x5180 {
+                    // SUBQ.L
+                    let data = (instruction >> 9) & 0x7;
+                    let reg = instruction & 0x7;
+                    let immediate = if data == 0 { 8 } else { data };
+                    format!("SUBQ.L #{}, D{}", immediate, reg)
+                } else if (instruction & 0xFFF8) == 0x51C8 {
+                    // DBRA
+                    let reg = instruction & 0x7;
+                    format!("DBRA D{}, (disp)", reg)
+                } else {
+                    format!("Scc/DBcc 0x{:04X}", instruction)
+                }
             }
             0x6 => {
                 let condition = (instruction >> 8) & 0xF;
@@ -757,13 +882,25 @@ impl EmulatorApp {
                 };
                 format!("{} {:+}", condition_name, displacement)
             }
-            0x4 => {
-                if instruction == 0x4E71 {
-                    "NOP".to_string()
-                } else if instruction == 0x4EF8 {
-                    "JMP (xxx).W".to_string()
+            0xD => {
+                let dest_reg = (instruction >> 9) & 0x7;
+                let src_reg = instruction & 0x7;
+                format!("ADD D{}, D{}", src_reg, dest_reg)
+            }
+            0xB => {
+                let dest_reg = (instruction >> 9) & 0x7;
+                let src_reg = instruction & 0x7;
+                format!("CMP D{}, D{}", src_reg, dest_reg)
+            }
+            0xE => {
+                if (instruction & 0xF1C0) == 0xE180 {
+                    // ASL.L #imm, Dn
+                    let count = (instruction >> 9) & 0x7;
+                    let reg = instruction & 0x7;
+                    let shift = if count == 0 { 8 } else { count };
+                    format!("ASL.L #{}, D{}", shift, reg)
                 } else {
-                    format!("MISC 0x{:04X}", instruction)
+                    format!("SHIFT 0x{:04X}", instruction)
                 }
             }
             _ => format!("UNK 0x{:04X}", instruction),
